@@ -22,24 +22,20 @@ Install Python 3.x: Ensure you have Python 3.x installed. You can download it fr
 Install Dependencies:
 Install the required Python package requests using pip:
 
-bash
-Copy
-Edit
+bash:
 pip install requests
 Get Your VirusTotal API Key:
 
 # Visit VirusTotal and create an account if you don't have one.
 
-# After logging in, go to your profile and copy your API key.
+# After logging in, go to your profile and  : your API key.
 
 # Setup
 Clone or Download the Script: Download or clone this repository to your local machine.
 
 Set Your API Key: In the script, replace the following line with your VirusTotal API key:
 
-python
-Copy
-Edit
+python:
 API_KEY = 'your-api-key'
 Ensure the file is in the correct directory: Make sure the script is in a location where you can access your target files for analysis.
 
@@ -48,17 +44,13 @@ Run the script:
 
 Open a terminal (Command Prompt, PowerShell, or any terminal) and navigate to the folder containing the MAS.py script. Then, run the script with the following command:
 
-bash
-Copy
-Edit
+bash:
 python MAS.py
 Input the file:
 When prompted, enter the full path to the file you want to analyze.
 
 # Example Output
-bash
-Copy
-Edit
+bash:
 [+] Starting malware scan...
 Enter file path for malware analysis: C:\path\to\your\file.exe
 [+] File uploaded successfully. File ID: abcdefghijklmnopqrstuvwxyz
