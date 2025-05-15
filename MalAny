@@ -1,105 +1,69 @@
-import os
-import hashlib
-import base64
-import pefile
 import requests
+import time
 
-# Common Malware File Extensions (you can expand this list)
-MALICIOUS_EXTENSIONS = ['.exe', '.scr', '.dll', '.vbs', '.js', '.bat', '.msi']
+# VirusTotal API key (Replace this with your actual API key)
+API_KEY = 'your-api-key'
 
-# Common Malware Hashes (these are examples, you'd need a list of known malware hashes)
-KNOWN_MALWARE_HASHES = [
-    'd41d8cd98f00b204e9800998ecf8427e',  # Example MD5 hash (empty file)
-    'e99a18c428cb38d5f260853678922e03',  # Example MD5 hash (another random file)
-]
+# VirusTotal API URL
+url = 'https://www.virustotal.com/api/v3/files/'
 
-# Function to calculate MD5 hash of a file
-def get_file_hash(filepath):
-    hash_md5 = hashlib.md5()
-    try:
-        with open(filepath, "rb") as f:
-            for chunk in iter(lambda: f.read(4096), b""):
-                hash_md5.update(chunk)
-        return hash_md5.hexdigest()
-    except Exception as e:
-        print(f"Error calculating hash for {filepath}: {e}")
-        return None
-
-# Function to check for file extensions
-def check_file_extension(filepath):
-    file_extension = os.path.splitext(filepath)[1].lower()
-    if file_extension in MALICIOUS_EXTENSIONS:
-        print(f"[!] Malicious extension detected: {file_extension} in {filepath}")
-
-# Function to check for PE headers (indicating a Windows executable)
-def check_pe_signature(filepath):
-    try:
-        pe = pefile.PE(filepath)
-        print(f"[+] PE file detected: {filepath}")
-    except Exception as e:
-        print(f"[-] Not a PE file: {filepath} ({e})")
-
-# Function to check for base64 encoded content
-def check_base64_encoding(filepath):
-    try:
-        with open(filepath, 'r', errors='ignore') as f:
-            content = f.read()
-            if '=' in content:
-                # A very basic check for base64 encoding in file content
-                decoded = base64.b64decode(content)
-                if decoded:
-                    print(f"[!] Base64 encoding detected in file: {filepath}")
-    except Exception as e:
-        print(f"[-] Error reading file {filepath}: {e}")
-
-# Function to check if file matches known malware hashes
-def check_known_hashes(filepath):
-    file_hash = get_file_hash(filepath)
-    if file_hash in KNOWN_MALWARE_HASHES:
-        print(f"[!] Known malware hash detected: {file_hash} in {filepath}")
-    else:
-        print(f"[+] No known malware hash found for {filepath}")
-
-# Function to analyze a file for malware
-def analyze_file(filepath):
-    print(f"\n[+] Analyzing file: {filepath}")
-    check_file_extension(filepath)
-    check_pe_signature(filepath)
-    check_base64_encoding(filepath)
-    check_known_hashes(filepath)
-
-# Function to analyze all files in a directory
-def analyze_directory(directory):
-    print(f"[+] Analyzing all files in directory: {directory}")
-    for root, dirs, files in os.walk(directory):
-        for file in files:
-            filepath = os.path.join(root, file)
-            analyze_file(filepath)
-
-# Function to submit file hashes to VirusTotal (requires API key)
-def submit_to_virustotal(file_hash):
-    # Use your actual API key here
-    API_KEY = 'YOUR_API_KEY'
-    url = f"https://www.virustotal.com/api/v3/files/{file_hash}"
+# Function to get the file report from VirusTotal
+def get_file_report(file_id):
     headers = {
-        "x-apikey": API_KEY
+        'x-apikey': API_KEY
     }
-    try:
-        response = requests.get(url, headers=headers)
+    
+    response = requests.get(url + file_id, headers=headers)
+    
+    if response.status_code == 200:
+        data = response.json()
+        print(f"Scan report for {file_id}:")
+        for scan in data['data']['attributes']['last_analysis_results'].items():
+            print(f"{scan[0]}: {scan[1]['result']}")
+    else:
+        print(f"Error: Unable to fetch report for file ID {file_id}")
+
+# Function to upload a file for scanning to VirusTotal
+def upload_file(file_path):
+    with open(file_path, 'rb') as file:
+        headers = {
+            'x-apikey': API_KEY
+        }
+        
+        files = {
+            'file': (file_path, file)
+        }
+        
+        # Send file for scanning
+        response = requests.post('https://www.virustotal.com/api/v3/files', headers=headers, files=files)
+        
         if response.status_code == 200:
-            data = response.json()
-            print(f"[+] VirusTotal results for hash {file_hash}:")
-            print(f"  Detection rate: {data['data']['attributes']['last_analysis_stats']}")
+            file_id = response.json()['data']['id']
+            print(f"File uploaded successfully. File ID: {file_id}")
+            return file_id
         else:
-            print(f"[-] Error submitting to VirusTotal: {response.status_code}")
-    except Exception as e:
-        print(f"[-] Error with VirusTotal API: {e}")
+            print("Error uploading file.")
+            return None
+
+# Main function to handle the flow
+def main():
+    print("[+] Starting malware scan...")
+    
+    # Input the file path for scanning
+    file_path = input("Enter file path for malware analysis: ")
+    
+    # Upload file for scanning
+    file_id = upload_file(file_path)
+    
+    if file_id:
+        # Wait for analysis to complete
+        print("[+] Waiting for the scan result...")
+        time.sleep(15)  # Wait for a while to allow the scan to complete
+        
+        # Fetch the scan report
+        get_file_report(file_id)
+    else:
+        print("[!] Failed to upload file for scanning.")
 
 if __name__ == "__main__":
-    # Analyze a directory for suspicious files
-    directory = input("Enter the directory to scan for suspicious files: ").strip()
-    analyze_directory(directory)
-    
-    # Optional: Submit a file hash to VirusTotal for additional analysis
-    file_hash = input("\nEnter a file hash to check with VirusTotal: ").strip()
-    submit_to_virustotal(file_hash)
+    main()
